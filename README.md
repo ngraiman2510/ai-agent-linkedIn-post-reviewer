@@ -1,125 +1,162 @@
 # LinkedIn Post Approval Agent
 
-This n8n workflow helps you draft and review a LinkedIn post before you decide
-whether to use it. Enter a topic in a simple form, let AI write and improve the
-draft, then approve or reject the final version from an email.
+Turn a topic into a reviewed LinkedIn post, approve it from your inbox, and
+automatically save approved posts to Google Sheets.
 
-> **You stay in control:** approval does not publish the post to LinkedIn. The
-> workflow only emails the draft and waits for your decision.
+> **You make the final call.** This workflow does not publish anything to
+> LinkedIn. It drafts, reviews, emails, and (if approved) logs the post.
 
-## What happens when I submit a topic?
+## Try to picture the flow
 
 ```text
-Topic form
-   ↓
-Writer Agent creates a draft
-   ↓
-Reviewer Agent checks and improves it
-   ↓
-Gmail sends you the final draft
-   ↓
-You approve or reject it
+You enter a topic
+       ↓
+Writer Agent drafts a post
+       ↓
+Reviewer Agent improves the draft
+       ↓
+Gmail asks you to approve or reject
+       ↓
+ Approved? ── Yes → Save the post to Google Sheets
+       └───── No  → Stop; nothing is added to the sheet
 ```
 
-The agents use OpenAI's `gpt-4o-mini` model. The writer is asked for a
-120–150-word post with a hook in the first line, exactly one call to action,
-and no more than three hashtags. The reviewer evaluates the hook, clarity, and
-call to action, then rewrites the weakest part. The final email contains the
-post for your review.
+Both AI agents use OpenAI's `gpt-4o-mini` by default. The draft instructions
+request 120–150 words, a hook in the first line, exactly one call to action,
+and up to three hashtags. The reviewer evaluates the hook, clarity, and call
+to action, then rewrites the weakest part.
 
-## See it in action
+## Quick start checklist
 
-### The workflow in n8n
+- [ ] Import `LinkedIn Post Approval Agent Latest.json` into n8n.
+- [ ] Connect your OpenAI, Gmail, and Google Sheets credentials.
+- [ ] Set the email address that should receive approval requests.
+- [ ] Select your own Google spreadsheet and confirm its column headers.
+- [ ] Run one test with a topic you can easily review.
 
-![LinkedIn post review workflow](LinkedIn%20Post%20Reviewer%20Agent.png)
+## Step 1: Import the workflow
 
-### The topic form
+1. In n8n, choose **Import from File**.
+2. Select [`LinkedIn Post Approval Agent Latest.json`](./LinkedIn%20Post%20Approval%20Agent%20Latest.json).
+3. Open the imported workflow and save it.
+
+The workflow is inactive by default. Connect your accounts before activating
+it or sharing the production form.
+
+## Step 2: Connect your accounts
+
+### OpenAI
+
+Open both **OpenAI Chat Model** nodes and select your OpenAI credential. The
+workflow uses `gpt-4o-mini`; select another available model if you prefer.
+
+### Gmail
+
+Open **Approval Email** and:
+
+1. Select your Gmail OAuth2 credential.
+2. Change **Send To** to the address where you want to receive approval
+   requests.
+3. Check the subject and approval/rejection buttons.
+4. Review the wait limit in the node. The exported workflow sets a value of
+   `24`; verify the time unit shown in your n8n version.
+
+The Gmail account needs permission to send these messages and wait for your
+approval response.
+
+### Google Sheets
+
+The **Append row in sheet** node records approved posts. Connect a Google
+Sheets OAuth2 credential, select your spreadsheet, and use these column
+headers in the first row:
+
+| Date | Topic | Final Post | Status |
+|---|---|---|---|
+| *(approval response time)* | *(submitted topic)* | *(reviewed post)* | `Approved` |
+
+The folder includes [`LinkedIn Posts.xlsx`](./LinkedIn%20Posts.xlsx) as a
+spreadsheet template. Upload or convert it to Google Sheets, then select that
+Google Sheet in n8n. If you use another sheet, make sure the four headers match
+exactly.
+
+> The exported workflow may contain references to credentials and accounts
+> from another n8n instance. Re-select your own credentials and spreadsheet
+> after importing. Do not put API keys or passwords in the workflow JSON.
+
+## Step 3: Make your first post
+
+1. In n8n, open the form trigger **On form submission**.
+2. For a test, start the workflow's test listener and open the test form URL.
+   For regular use, activate/publish the workflow and use its production form
+   URL.
+3. Enter a clear topic. For example:
+
+   > How small teams can use AI responsibly
+
+4. Submit the form. The writer and reviewer will prepare the post.
+5. Open the email titled **LinkedIn post Approval**.
+6. Read the complete post, then select **Approve** or **Reject**.
+7. If approved, check your Google Sheet for the new row.
+
+### What should happen?
+
+- **Approved:** the workflow appends the approval time, topic, final post, and
+  `Approved` status to the selected Google Sheet.
+- **Rejected:** the workflow does not append a row. It does not publish or
+  automatically rewrite the post.
+- **No response:** the workflow waits until the configured approval wait limit
+  is reached.
+
+## See the workflow and form
+
+### Workflow diagram
+
+![LinkedIn post approval workflow](LinkedIn%20Post%20Multiagent%20approver.png)
+
+### Topic form
 
 ![Form for entering a LinkedIn post topic](Linked%20Post%20Topic%20On%20Form%20Submission.png)
 
-## What you need
+### Example approval email
 
-- An n8n instance
-- An OpenAI API credential
-- A Gmail OAuth2 credential that can send approval emails
-- Access to the email address where you want to receive drafts
+[`Gmail - LinkedIn post Approval.pdf`](./Gmail%20-%20LinkedIn%20post%20Approval.pdf)
 
-OpenAI usage may incur charges. Email topic data and generated post content are
-sent to the connected OpenAI and Gmail accounts.
+## Files in this project
 
-## Set it up
+- `LinkedIn Post Approval Agent Latest.json` - current n8n workflow export
+- `LinkedIn Posts.xlsx` - spreadsheet template for approved-post logging
+- `LinkedIn Post Multiagent approver.png` - workflow screenshot
+- `Linked Post Topic On Form Submission.png` - form screenshot
+- `Gmail - LinkedIn post Approval.pdf` - example approval email
 
-### 1. Import the workflow
+## Want to customize it?
 
-1. Download or open `LinkedIn Post Approval Agent.json`.
-2. In n8n, choose **Import from File** and select that JSON file.
-3. Open the imported workflow.
+- **Change the post style:** edit the prompts in **Writer Agent** and
+  **Reviewer Agent**. Keep the requirements consistent in both prompts.
+- **Change the form:** edit the title, description, or required topic field in
+  **On form submission**.
+- **Change the reviewer:** adjust what it checks (hook, clarity, call to
+  action) in **Reviewer Agent**.
+- **Change the approver:** update **Send To** and the email subject in
+  **Approval Email**.
+- **Change where approvals are saved:** select another Google spreadsheet in
+  **Append row in sheet**, keeping the expected headers.
 
-### 2. Connect OpenAI
+## If something does not work
 
-1. Open each **OpenAI Chat Model** node.
-2. Select your OpenAI credential.
-3. The workflow uses `gpt-4o-mini` by default. Change the model if needed.
+| What you see | What to check |
+|---|---|
+| Form URL does not open | Use the test URL while the test listener is running, or activate/publish the workflow for its production URL. |
+| AI node fails | Confirm the OpenAI credential, model access, and API usage balance. |
+| Approval email is missing | Check the Gmail credential, recipient address, spam folder, and the node's execution details. |
+| Approved post is not in Sheets | Confirm the Google Sheets credential, selected document, worksheet, and exact column headers. |
+| Execution is still waiting | The Gmail approval node pauses until you respond or its configured wait limit is reached. |
 
-### 3. Connect Gmail and choose who receives the approval email
+## A few important notes
 
-1. Open **Approval Email**.
-2. Select your Gmail OAuth2 credential.
-3. Change **Send To** to your email address.
-4. Confirm the email subject and approve/reject buttons are suitable.
-5. Check the node's wait-time setting. The exported workflow has a wait limit
-   configured with a value of `24`; confirm the unit shown in your n8n version.
-
-> The imported workflow may refer to credentials from another n8n account.
-> Select your own credentials; credentials are not included in the exported
-> workflow.
-
-### 4. Try it out
-
-1. Save the workflow.
-2. In n8n, run it in test mode and open the form-test URL, or activate/publish
-   the workflow and use its production form URL.
-3. Enter a focused topic, such as `How small teams can use AI responsibly`.
-4. Submit the form and wait for the workflow to finish writing and reviewing.
-5. Check your inbox for **LinkedIn post Approval**.
-6. Read the draft, then choose **Approve** or **Reject** in the email.
-
-If you're using a production form, the workflow must be active or published in
-your n8n version. Test submissions may use a temporary form URL.
-
-## Files in this folder
-
-- `LinkedIn Post Approval Agent.json` - workflow to import into n8n
-- `LinkedIn Post Reviewer Agent.png` - workflow screenshot
-- `Linked Post Topic On Form Submission.png` - topic form screenshot
-- `Gmail AI Agent n8n workflow.png` - Gmail AI Agent screenshot (not part of this
-  LinkedIn approval workflow)
-
-## Change the writing style
-
-You can edit the prompts in **Writer Agent** and **Reviewer Agent** to change
-the post requirements. For example, adjust the word count, tone, hashtag limit,
-or call-to-action rule. Keep the two prompts consistent so the reviewer
-preserves the style you want.
-
-You can also change the form title and description in **On form submission**,
-and the recipient and email subject in **Approval Email**.
-
-## What this workflow does not do
-
-- It does not publish or schedule posts on LinkedIn.
-- It does not automatically revise a rejected post or send a second draft.
-- It does not guarantee that AI-generated facts are correct; review the draft
-  before using it.
-
-## If something goes wrong
-
-- **The form does not open:** use the test URL while executing in test mode, or
-  activate/publish the workflow before using its production URL.
-- **The AI nodes fail:** check the OpenAI credential, API access, and available
-  usage balance.
-- **No approval email arrives:** check the Gmail credential, recipient address,
-  spam folder, and the **Approval Email** node's execution details.
-- **The workflow is waiting:** open the execution in n8n; the Gmail approval
-  node pauses until a decision is submitted or its configured wait limit is
-  reached.
+- Approval is a human review step, not LinkedIn publishing.
+- Review generated text for accuracy, tone, and claims before using it.
+- The workflow sends the submitted topic and generated content to OpenAI, and
+  sends the final draft to Gmail. Use accounts and data that you are authorized
+  to share with those services.
+- OpenAI API usage may incur charges.
